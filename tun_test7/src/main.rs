@@ -64,14 +64,14 @@ async fn main() -> Result<()> {
 
     let (mut reader, mut _writer) = tokio::io::split(tun);
 
-
-     let (tx, mut rx) = mpsc::channel(32);
-     let tx2 = tx.clone();
+    //------------------------------------------------
+     let (tx1, mut rx1) = mpsc::channel(32);
+     let tx1_ = tx1.clone();
     
-     let replyer = tokio::spawn(async move {
+     let replyer1 = tokio::spawn(async move {
      
-         // Start receiving messages
-         while let Some(cmd) = rx.recv().await {
+         // start receiving messages
+         while let Some(cmd) = rx1.recv().await {
              use Command::*;
      
              match cmd {
@@ -88,6 +88,32 @@ async fn main() -> Result<()> {
          }
      });
 
+    //------------------------------------------------
+
+     let (tx2, mut rx2) = mpsc::channel(32);
+     let tx2_ = tx2.clone();
+    
+     let replyer2 = tokio::spawn(async move {
+     
+         // start receiving messages
+         while let Some(cmd) = rx2.recv().await {
+             use Command::*;
+     
+             match cmd {
+                 Get { key } => {
+                     println!("    Get");
+                 }
+                 Set { key, val } => {
+                     println!("    Set");
+                     async {
+                          _writer.write(&val[..]).await;
+                     }.await;
+                 }
+             }
+         }
+     });
+
+    //----------------------------------------------
     let mut buf = [0u8; 1024];
     loop {
         let n = reader.read(&mut buf).await?;
@@ -119,7 +145,7 @@ async fn main() -> Result<()> {
                                 val: v,
                             };
 
-                            tx2.send(cmd).await.unwrap();
+                            tx1_.send(cmd).await.unwrap();
 
 
                          },
