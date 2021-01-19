@@ -20,41 +20,6 @@ use pnet::packet::Packet;
 use std::net::IpAddr;
 mod packet_handler;
 
-/*
-fn capture_packet(packet: &EthernetPacket) {
-  //　イーサネットの上位のプロトコルを確認
-  match packet.get_ethertype() {
-    // Ipv4上のtcpまたはudpを表示
-    EtherTypes::Ipv4 => {
-      let ipv4 = Ipv4Packet::new(packet.payload());
-      if let Some(ipv4) = ipv4 {
-        match ipv4.get_next_level_protocol() {
-          IpNextHeaderProtocols::Tcp => {
-            let tcp = TcpPacket::new(ipv4.payload());
-            if let Some(tcp) = tcp {
-              println!("TCP {}:{} -> {}:{}", ipv4.get_source(), tcp.get_source(), ipv4.get_destination(), tcp.get_destination());
-            }
-          }
-          IpNextHeaderProtocols::Udp => {
-            let udp = UdpPacket::new(ipv4.payload());
-            if let Some(udp) = udp {
-              println!("UDP {}:{} -> {}:{}", ipv4.get_source(), udp.get_source(), ipv4.get_destination(), udp.get_destination());
-            }
-          }
-          _ => println!("not tcp"),
-        }
-      }
-    }
-    EtherTypes::Ipv6 => {
-         println!("pv6")
-    }
-    EtherTypes::Arp => {
-         println!("arp")
-    }
-    _ => println!("unknown packet"),
-  }
-}
-*/
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -98,7 +63,7 @@ async fn main() -> Result<()> {
         let n = reader.read(&mut buf).await?;
 
         //_writer.write_all(&buf).await?;
-        _writer.write(&buf).await?;
+        //_writer.write(&buf).await?;
 
         let header = Ipv4Packet::new(&mut buf[..n]).unwrap(); 
          println!("{} -> {}",header.get_source(), header.get_destination());
@@ -109,25 +74,35 @@ async fn main() -> Result<()> {
                         20
                     };
 
-        packet_handler::handle_transport_protocol(
+        //packet_handler::handle_transport_protocol(
+        //    "test",
+        //    IpAddr::V4(header.get_source()),
+        //    IpAddr::V4(header.get_destination()),
+        //    header. get_next_level_protocol(),
+        //    //&buf[20..n],
+        //    &buf[hlen..n],
+        //    &buf,
+        //    &mut _writer,
+        //    //tun,
+        //);
+
+        let packet_vec = packet_handler::make_handle_transport_protocol(
             "test",
             IpAddr::V4(header.get_source()),
             IpAddr::V4(header.get_destination()),
             header. get_next_level_protocol(),
             //&buf[20..n],
             &buf[hlen..n],
-            &buf,
-            &mut _writer,
-            //tun,
         );
 
-
-        //if let Some(header) = header {
-        //                 //                   println!("{?}",header.get_source());
-        //                                    //header.get_destination()
-        //     println!("Ipv4")
-        // } else {
-        //                  //println!("[{}]: Malformed IPv4 Packet", interface_name);
+        match packet_vec {
+              Some(v) => {
+                            _writer.write(&v[..]).await?;
+                         },
+              None => {
+                          println!("none value");
+                       },
+        };
         //     println!("unknow")
         // }
     }

@@ -108,6 +108,103 @@ fn send_ipv4_packet(
     //};
 }
 
+fn make_ipv4_packet(
+    source: Ipv4Addr,
+    destination: Ipv4Addr,
+    protocol: IpNextHeaderProtocol,
+    payload: &[u8],
+) ->Vec<u8> {
+    println!("send");
+    let buf_size = MutableIpv4Packet::minimum_packet_size() + payload.len();
+    let mut ip_packet = MutableIpv4Packet::owned(vec![0u8; buf_size]).unwrap();
+
+    ip_packet.set_version(4);
+    ip_packet.set_header_length(5); // 5 × 32 bits = 160 bits = 20 bytes
+    ip_packet.set_dscp(0); // DF - Default Forwarding
+    ip_packet.set_ecn(0);
+    ip_packet.set_total_length(buf_size as u16);
+    ip_packet.set_identification(0);
+    ip_packet.set_flags(2); // 010 - DF bit set
+    ip_packet.set_fragment_offset(0);
+    ip_packet.set_ttl(64);
+    ip_packet.set_next_level_protocol(protocol);
+    ip_packet.set_source(source);
+    ip_packet.set_destination(destination);
+    ip_packet.set_payload(payload);
+    let checksum = ipv4::checksum(&ip_packet.to_immutable());
+    ip_packet.set_checksum(checksum);
+
+    ip_packet.packet().to_vec()
+}
+
+fn make_handle_icmp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, 
+packet: &[u8]
+ ) -> Option<Vec<u8>> {
+
+
+    let icmp_packet = IcmpPacket::new(packet);
+    if let Some(icmp_packet) = icmp_packet {
+        match icmp_packet.get_icmp_type() {
+            IcmpTypes::EchoReply => {
+                let echo_reply_packet = echo_reply::EchoReplyPacket::new(packet).unwrap();
+                println!(
+                    "[{}]: ICMP echo reply {} -> {} (seq={:?}, id={:?})",
+                    interface_name,
+                    source,
+                    destination,
+                    echo_reply_packet.get_sequence_number(),
+                    echo_reply_packet.get_identifier()
+                );
+              None
+            }
+            IcmpTypes::EchoRequest => {
+                 println!("recv");
+                let echo_request_packet = echo_request::EchoRequestPacket::new(packet).unwrap();
+                println!(
+                    "[{}]: ICMP echo request {} -> {} (seq={:?}, id={:?})",
+                    interface_name,
+                    source,
+                    destination,
+                    echo_request_packet.get_sequence_number(),
+                    echo_request_packet.get_identifier()
+                );
+               let mut echo_reply_packet =
+                       echo_reply::MutableEchoReplyPacket::owned(packet.to_vec()).unwrap();
+                echo_reply_packet.set_icmp_type(IcmpTypes::EchoReply);
+                let icmp_packet = IcmpPacket::new(echo_reply_packet.packet()).unwrap();
+                let checksum = icmp::checksum(&icmp_packet);
+                echo_reply_packet.set_checksum(checksum);
+                match (source, destination) {
+                       (IpAddr::V4(source), IpAddr::V4(destination)) => {
+                                         Some(make_ipv4_packet(
+                                             destination,
+                                             source,
+                                             IpNextHeaderProtocols::Icmp,
+                                             echo_reply_packet.packet(),
+                                         ))
+                       },
+                        _ => {
+                          None
+                        }
+                }
+                //////////////////////////////////////////
+            }
+            _ => {println!(
+                "[{}]: ICMP packet {} -> {} (type={:?})",
+                interface_name,
+                source,
+                destination,
+                icmp_packet.get_icmp_type()
+            );
+            None
+           }
+        }
+    } else {
+        println!("[{}]: Malformed ICMP Packet", interface_name);
+       None
+    }
+}
+
 fn handle_icmp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, 
 packet: &[u8],
 recv_packet: &[u8],
@@ -272,6 +369,37 @@ pub fn handle_transport_protocol(
     }
 }
 
+pub fn make_handle_transport_protocol(
+    interface_name: &str,
+    source: IpAddr,
+    destination: IpAddr,
+    protocol: IpNextHeaderProtocol,
+    packet: &[u8],
+) -> Option<Vec<u8>> {
+    match protocol {
+        IpNextHeaderProtocols::Udp => {
+            //handle_udp_packet(interface_name, source, destination, packet, writer)
+           None
+        }
+        IpNextHeaderProtocols::Tcp => {
+            //handle_tcp_packet(interface_name, source, destination, packet, writer)
+           None
+
+
+        }
+        IpNextHeaderProtocols::Icmp => {
+            make_handle_icmp_packet(interface_name, source, destination, packet)
+           
+        }
+        IpNextHeaderProtocols::Icmpv6 => {
+           // handle_icmpv6_packet(interface_name, source, destination, packet, writer)
+           None
+        }
+        _ => { 
+           None
+        },
+    }
+}
 pub async fn handle_transport_protocol2(
     interface_name: &str,
     source: IpAddr,
