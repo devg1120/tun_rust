@@ -1,31 +1,32 @@
 //extern crate packet;
 
-use pnet::datalink::{self, NetworkInterface};
+//use pnet::datalink::{ NetworkInterface};
 
-use pnet::packet::arp::ArpPacket;
-use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
-use pnet::packet::icmp::{self,echo_reply, echo_request, MutableIcmpPacket, IcmpPacket, IcmpTypes};
-use pnet::packet::icmpv6::Icmpv6Packet;
+//use pnet::packet::arp::ArpPacket;
+//use pnet::packet::ethernet::{EtherTypes, EthernetPacket };
+use pnet::packet::icmp::{self,echo_reply, echo_request ,IcmpPacket, IcmpTypes};
+//use pnet::packet::icmpv6::Icmpv6Packet;
 use pnet::packet::ip::{IpNextHeaderProtocol, IpNextHeaderProtocols};
-use pnet::packet::ipv4::{self, Ipv4Packet,MutableIpv4Packet};
-use pnet::packet::ipv6::Ipv6Packet;
-use pnet::packet::tcp::TcpPacket;
-use pnet::packet::udp::UdpPacket;
+use pnet::packet::ipv4::{self, MutableIpv4Packet};
+//use pnet::packet::ipv6::Ipv6Packet;
+//use pnet::packet::tcp::TcpPacket;
+//use pnet::packet::udp::UdpPacket;
 use pnet::packet::Packet;
-use pnet::util::MacAddr;
+//use pnet::util::MacAddr;
 
-use tokio_tun::Tun;
-use tokio::io::WriteHalf;
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
+//use tokio_tun::Tun;
+//use tokio::io::WriteHalf;
+//use tokio::io::AsyncReadExt;
+//use tokio::io::AsyncWriteExt;
 //use tokio::io::Write;
-use tokio_tun::TunBuilder;
+//use tokio_tun::TunBuilder;
 
 //use std::env;
 //use std::io::{self, Write};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr };
 //use std::process;
 
+/*
 fn handle_udp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, packet: &[u8], writer: &tokio::io::WriteHalf<Tun>) {
     let udp = UdpPacket::new(packet);
 
@@ -43,7 +44,8 @@ fn handle_udp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, 
         println!("[{}]: Malformed UDP Packet", interface_name);
     }
 }
-
+*/
+/*
 fn send_ipv4_packet(
     source: Ipv4Addr,
     destination: Ipv4Addr,
@@ -107,6 +109,7 @@ fn send_ipv4_packet(
     //    );
     //};
 }
+*/
 
 fn make_ipv4_packet(
     source: Ipv4Addr,
@@ -205,6 +208,7 @@ packet: &[u8]
     }
 }
 
+/*
 fn handle_icmp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, 
 packet: &[u8],
 recv_packet: &[u8],
@@ -238,31 +242,6 @@ recv_packet: &[u8],
                     echo_request_packet.get_sequence_number(),
                     echo_request_packet.get_identifier()
                 );
-                /*
-                //////////////////////////////////////////
-                // Allocate enough space for a new packet
-                //let mut vec: Vec<u8> = vec![0; packet.packet().len()];
-                let mut vec: Vec<u8> = vec![0; packet.len()];
-                //let mut new_packet = MutableUdpPacket::new(&mut vec[..]).unwrap();
-                let mut new_packet = echo_reply::MutableEchoReplyPacket::new(&mut vec[..]).unwrap();
-
-                // Create a clone of the original packet
-                new_packet.clone_from(&icmp_packet);
-
-                // Switch the source and destination ports
-                new_packet.set_source(destination);
-                new_packet.set_destination(source);
-                //let addr = packet.get_source();
-
-                // Send the packet
-                match writer.send_to(new_packet, source) {
-                    //Ok(n) => assert_eq!(n, packet.packet().len()),
-                    //Err(e) => panic!("failed to send packet: {}", e),
-                    Ok(n) => println!("ok"),
-                    Err(e) => panic!("failed to send packet: {}"),
-                }
-                //////////////////////////////////////////
-                */
          let mut echo_reply_packet =
                     
                     echo_reply::MutableEchoReplyPacket::owned(packet.to_vec()).unwrap();
@@ -299,7 +278,8 @@ recv_packet: &[u8],
         println!("[{}]: Malformed ICMP Packet", interface_name);
     }
 }
-
+*/
+/*
 fn handle_icmpv6_packet(interface_name: &str, source: IpAddr, destination: IpAddr, packet: &[u8], writer: &tokio::io::WriteHalf<Tun>) {
     let icmpv6_packet = Icmpv6Packet::new(packet);
     if let Some(icmpv6_packet) = icmpv6_packet {
@@ -314,7 +294,8 @@ fn handle_icmpv6_packet(interface_name: &str, source: IpAddr, destination: IpAdd
         println!("[{}]: Malformed ICMPv6 Packet", interface_name);
     }
 }
-
+*/
+/*
 fn handle_tcp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, packet: &[u8], writer: &tokio::io::WriteHalf<Tun>) {
     let tcp = TcpPacket::new(packet);
     if let Some(tcp) = tcp {
@@ -331,7 +312,8 @@ fn handle_tcp_packet(interface_name: &str, source: IpAddr, destination: IpAddr, 
         println!("[{}]: Malformed TCP Packet", interface_name);
     }
 }
-
+*/
+/*
 pub fn handle_transport_protocol(
     interface_name: &str,
     source: IpAddr,
@@ -368,6 +350,7 @@ pub fn handle_transport_protocol(
         ),
     }
 }
+*/
 
 pub fn make_handle_transport_protocol(
     interface_name: &str,
@@ -400,6 +383,7 @@ pub fn make_handle_transport_protocol(
         },
     }
 }
+/*
 pub async fn handle_transport_protocol2(
     interface_name: &str,
     source: IpAddr,
@@ -482,6 +466,7 @@ pub fn handle_ethernet_frame(interface: &NetworkInterface, ethernet: &EthernetPa
         ),
     }
 }
+*/
 
 /*
 fn main() {

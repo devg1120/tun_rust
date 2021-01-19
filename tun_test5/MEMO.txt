@@ -1,4 +1,4 @@
 sudo ./target/debug/tun_rust
-
+ping 10.1.0.2
 sudo tshark -i tun0
 

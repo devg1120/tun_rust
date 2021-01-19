@@ -17,6 +17,7 @@ nix = "0.19"
 futures = "0.3"
 
 pnet = "0.27.2"
+bytes = "*"
 
 
 [dev-dependencies]

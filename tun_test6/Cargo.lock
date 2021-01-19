@@ -637,6 +637,7 @@ dependencies = [
 name = "tun_rust"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "futures",
  "libc",
  "nix",

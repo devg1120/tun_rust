@@ -6,20 +6,27 @@ use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio_tun::result::Result;
 use tokio_tun::TunBuilder;
-
-//use pnet::datalink::{self, NetworkInterface};
-use pnet::datalink::Channel::Ethernet;
-//use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
-use pnet::packet::ethernet::{EtherTypes, EthernetPacket };
 use pnet::packet::ipv4::Ipv4Packet;
-use pnet::packet::tcp::TcpPacket;
-use pnet::packet::udp::UdpPacket;
-use pnet::packet::ip::IpNextHeaderProtocols;
-use pnet::packet::Packet;
-
 use std::net::IpAddr;
+use bytes::Bytes;
+ 
+use tokio::sync::mpsc;
+use tokio::spawn;
+use tokio::task;
+
 mod packet_handler;
 
+
+#[derive(Debug)]
+enum Command {
+    Get {
+        key: String,
+    },
+    Set {
+        key: String,
+        val: Vec<u8>,
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,7 +41,6 @@ async fn main() -> Result<()> {
         .broadcast(Ipv4Addr::BROADCAST)
         .netmask(Ipv4Addr::new(255, 255, 255, 0))
         .try_build()?;
-
 
     println!("-----------");
     println!("tun created");
@@ -58,12 +64,33 @@ async fn main() -> Result<()> {
 
     let (mut reader, mut _writer) = tokio::io::split(tun);
 
+
+     let (tx, mut rx) = mpsc::channel(32);
+     let tx2 = tx.clone();
+    
+     let replyer = tokio::spawn(async move {
+     
+         // Start receiving messages
+         while let Some(cmd) = rx.recv().await {
+             use Command::*;
+     
+             match cmd {
+                 Get { key } => {
+                     println!("    Get");
+                 }
+                 Set { key, val } => {
+                     println!("    Set");
+                     async {
+                          _writer.write(&val[..]).await;
+                     }.await;
+                 }
+             }
+         }
+     });
+
     let mut buf = [0u8; 1024];
     loop {
         let n = reader.read(&mut buf).await?;
-
-        //_writer.write_all(&buf).await?;
-        //_writer.write(&buf).await?;
 
         let header = Ipv4Packet::new(&mut buf[..n]).unwrap(); 
          println!("{} -> {}",header.get_source(), header.get_destination());
@@ -74,36 +101,154 @@ async fn main() -> Result<()> {
                         20
                     };
 
-        //packet_handler::handle_transport_protocol(
-        //    "test",
-        //    IpAddr::V4(header.get_source()),
-        //    IpAddr::V4(header.get_destination()),
-        //    header. get_next_level_protocol(),
-        //    //&buf[20..n],
-        //    &buf[hlen..n],
-        //    &buf,
-        //    &mut _writer,
-        //    //tun,
-        //);
 
         let packet_vec = packet_handler::make_handle_transport_protocol(
             "test",
             IpAddr::V4(header.get_source()),
             IpAddr::V4(header.get_destination()),
             header. get_next_level_protocol(),
-            //&buf[20..n],
             &buf[hlen..n],
         );
 
         match packet_vec {
               Some(v) => {
-                            _writer.write(&v[..]).await?;
+                            //_writer.write(&v[..]).await?;
+
+                            let cmd = Command::Set {
+                                key: "foo".to_string(),
+                                val: v,
+                            };
+
+                            tx2.send(cmd).await.unwrap();
+
+
                          },
               None => {
                           println!("none value");
                        },
         };
-        //     println!("unknow")
-        // }
+
+
     }
 }
+
+
+
+/*
+
+#[derive(Debug)]
+enum Command {
+    Get {
+        key: String,
+    },
+    Set {
+        key: String,
+        val: Vec<u8>,
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let tun = TunBuilder::new()
+        .name("")
+        .tap(false)
+        .packet_info(false)
+        .mtu(1500)
+        .up()
+        .address(Ipv4Addr::new(10, 0, 0, 1))
+        .destination(Ipv4Addr::new(10, 1, 0, 1))
+        .broadcast(Ipv4Addr::BROADCAST)
+        .netmask(Ipv4Addr::new(255, 255, 255, 0))
+        .try_build()?;
+
+    println!("-----------");
+    println!("tun created");
+    println!("-----------");
+
+    println!(
+        "┌ name: {}\n├ fd: {}\n├ mtu: {}\n├ flags: {}\n├ address: {}\n├ destination: {}\n├ broadcast: {}\n└ netmask: {}",
+        tun.name(),
+        tun.as_raw_fd(),
+        tun.mtu().unwrap(),
+        tun.flags().unwrap(),
+        tun.address().unwrap(),
+        tun.destination().unwrap(),
+        tun.broadcast().unwrap(),
+        tun.netmask().unwrap(),
+    );
+
+    println!("---------------------");
+    println!("ping 10.1.0.2 to test");
+    println!("---------------------");
+
+    let (mut reader, mut _writer) = tokio::io::split(tun);
+
+
+     let (tx, mut rx) = mpsc::channel(32);
+     let tx2 = tx.clone();
+    
+     let replyer = tokio::spawn(async move {
+     
+         // Start receiving messages
+         while let Some(cmd) = rx.recv().await {
+             use Command::*;
+     
+             match cmd {
+                 Get { key } => {
+                     println!("    Get");
+                 }
+                 Set { key, val } => {
+                     println!("    Set");
+                     async {
+                          _writer.write(&val[..]).await;
+                     }.await;
+                 }
+             }
+         }
+     });
+
+    let mut buf = [0u8; 1024];
+    loop {
+        let n = reader.read(&mut buf).await?;
+
+        let header = Ipv4Packet::new(&mut buf[..n]).unwrap(); 
+         println!("{} -> {}",header.get_source(), header.get_destination());
+         let ihl = usize::from(header.get_header_length());
+         let hlen = if ihl > 5  {
+                      20 + (ihl - 5)*4
+                    }else {
+                        20
+                    };
+
+
+        let packet_vec = packet_handler::make_handle_transport_protocol(
+            "test",
+            IpAddr::V4(header.get_source()),
+            IpAddr::V4(header.get_destination()),
+            header. get_next_level_protocol(),
+            &buf[hlen..n],
+        );
+
+        match packet_vec {
+              Some(v) => {
+                            //_writer.write(&v[..]).await?;
+
+                            let cmd = Command::Set {
+                                key: "foo".to_string(),
+                                val: v,
+                            };
+
+                            tx2.send(cmd).await.unwrap();
+
+
+                         },
+              None => {
+                          println!("none value");
+                       },
+        };
+
+
+    }
+}
+
+*/
