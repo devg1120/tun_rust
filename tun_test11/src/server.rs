@@ -17,6 +17,9 @@ use tokio::net::{TcpListener, TcpStream};
 //use tokio_tungstenite::{accept_async, tungstenite::Error, tungstenite::Message, tungstenite::Result};
 use tokio_tungstenite::{accept_async, tungstenite::Message, tungstenite::Result};
 
+//use std::str::FromStr;
+
+
 fn type_of<T>(_: T) -> String {
     let a = std::any::type_name::<T>();
     return a.to_string();
@@ -59,31 +62,83 @@ async fn handle_connection(
                                    println!("msg : {}",msg);
                                    println!("type : {}",type_of(&msg));
 
-                                   match &msg {
+                                   let some_cmd_target = match &msg {
                                             Message::Text(s) => {
                                              let args: Vec<String> = s.split(' ').map(|x| x.to_string())
                                                                                 .collect();
                                                        println!("{:?}", args);
+                                                      None
                                             },
                                             Message::Binary(v) => {
                                                        println!("{:?}",v);
                                                        let str = v.iter().map(|&s| s as char).collect::<String>();
                                                        println!("{}",str);
-                                                       let args: Vec<String> = str.split(' ').map(|x| x.to_string())
+                                                       let args: Vec<String> = str.trim().split(' ').map(|x| x.to_string())
                                                                                 .collect();
                                                        println!("{:?}", args);
+                                                       Some(args)
+
 
                                             },
                                             _ => {
+                                                      None
                                             },
-                                   }
+                                   };
+
+                                   let target = match some_cmd_target {
+                                         Some(t) => t,
+                                         None => continue,
+                                   };
+
+                                   let cmd = target.get(0);
+                                   let ipaddr = target.get(1);
+                                   println!("cmd:{:?}", cmd);
+                                   println!("ipaddr:{:?}", ipaddr);
+
+                                   let (cf_, cmd_) = match cmd {
+                                                Some(cmd2) => {
+                                                        match cmd2.as_str() {
+                                                                 "start" =>(true, "start"),
+                                                                 "stop" => (true, "stop"),
+                                                                 _ => (false,""),
+                                                                }
+                                                        },
+                                                 None => (false, ""),
+                                        };
+                                   
+                                                                      
+                                   if !cf_ {
+                                       println!("--- cmd error continue");
+                                       continue;
+                                   };
+/*
+                                   let (if_, ip_) = match ipaddr {
+                                                Some(ip) => {
 
 
+
+                                                        },
+                                                 None => (false, ""),
+                                        };
+                                   
+                                                                      
+                                   if !if_ {
+                                       println!("--- ipaddr error continue");
+                                       continue;
+                                   };
+*/
                                    ws_sender.send(msg).await?;
                                    ws_sender.send(Message::text("Ok".to_string())).await?;
 
                                    let rtx_ = {
-                                                 let  ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
+                                                 //let  ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
+                                                 //let  ipaddr = IpAddr::from_str("10.1.0.2");
+                                                 let addr_ = "10.1.0.2".parse::<IpAddr>();
+                                                 let ipaddr = 
+                                                              match addr_ {
+                                                                 Ok(a) => a,
+                                                                 Err(v) => continue,
+                                                            };
                                                  let map = arc_map.lock().unwrap();
                                                  let tmp_tx = if map.contains_key(&ipaddr) {
                                                                match map.get(&ipaddr) {
