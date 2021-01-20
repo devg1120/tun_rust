@@ -66,57 +66,61 @@ pub async fn start(arc_map: Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>
         let peer = stream.peer_addr().expect("connected streams should have a peer address");
         //tokio::spawn(accept_connection(arc_map.clone(), stream));
         //tokio::spawn(accept_connection(arc_map.clone(), peer, stream));
-        let handle = tokio::spawn(handle_connection(arc_map.clone(), peer, stream));
-        //let _ = handle.await.unwrap();
+
+        //tokio::spawn(handle_connection(arc_map.clone(), peer, stream));
+        tokio::spawn(handle_connection(arc_map.clone(), peer, stream));
+
+        //let handle = tokio::spawn(handle_connection(arc_map, peer, stream));
 
     }
 
     Ok(())
 }
 
-async fn accept_connection(arc_map: Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>,peer: SocketAddr,stream: TcpStream)
-   -> Result<()> {
-    /*
-    let addr = stream.peer_addr().expect("connected streams should have a peer address");
-    //info!("Peer address: {}", addr);
 
-    let ws_stream = tokio_tungstenite::accept_async(stream)
-        .await
-        .expect("Error during the websocket handshake occurred");
-
-    //info!("New WebSocket connection: {}", addr);
-
-    let (write, read) = ws_stream.split();
-    read.forward(write).await.expect("Failed to forward message");
-*/
-
-
-    if let Err(e) = handle_connection(arc_map, peer, stream).await {
-        match e {
-            Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
-            err => error!("Error processing connection: {}", err),
-        }
-    }
-    Ok(())
+//async fn accept_connection(arc_map: Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>,peer: SocketAddr,stream: TcpStream)
+//   -> Result<()> {
+//    /*
+//    let addr = stream.peer_addr().expect("connected streams should have a peer address");
+//    //info!("Peer address: {}", addr);
+//
+//    let ws_stream = tokio_tungstenite::accept_async(stream)
+//        .await
+//        .expect("Error during the websocket handshake occurred");
+//
+//    //info!("New WebSocket connection: {}", addr);
+//
+//    let (write, read) = ws_stream.split();
+//    read.forward(write).await.expect("Failed to forward message");
+//*/
+//
+//
+////    if let Err(e) = handle_connection(arc_map, peer, stream).await {
+////        match e {
+////            Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
+////            err => error!("Error processing connection: {}", err),
+////        }
+////    }
+////    Ok(())
+//
+///*
+//    let ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
+//    let mut map = arc_map.lock().unwrap();
+//    if map.contains_key(&ipaddr) {
+//            match map.get(&ipaddr) {
+//                Some(target) => { //&target.tx,
+//                                  println!(" is match.");
+//                        },
+//                None => {
+//                    println!(" is unreviewed.");
+//                    return;
+//                }
+//            }
+//      }
+//*/
+//}
 
 /*
-    let ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
-    let mut map = arc_map.lock().unwrap();
-    if map.contains_key(&ipaddr) {
-            match map.get(&ipaddr) {
-                Some(target) => { //&target.tx,
-                                  println!(" is match.");
-                        },
-                None => {
-                    println!(" is unreviewed.");
-                    return;
-                }
-            }
-      }
-*/
-}
-
-
 //async fn parser(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>, msg :&Message) -> Result<()> {
 async fn parser(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>, msg :&Message)  {
 
@@ -153,6 +157,7 @@ async fn parser(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>, 
   //Ok(())
 
 }
+*/
 /*
 async fn parser(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>, msg :&Message) -> Result<()> {
 
@@ -205,34 +210,41 @@ async fn handle_connection(arc_map: Arc<std::sync::Mutex<HashMap<IpAddr,super::T
                         if msg.is_text() ||msg.is_binary() {
 
                            // parser(&arc_map, &msg).await;
+
                            ws_sender.send(msg).await?;
 
-                           let  ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
-                           //let map = arc_map.lock().unwrap();
-                           let map_lock = Arc::clone(&arc_map);
-                           let map = map_lock.lock().unwrap();
-                           let rtx_ = if map.contains_key(&ipaddr) {
-                                          match map.get(&ipaddr) {
-                                              Some(target) => {
-                                                        println!("map ok ");
-                                                        Some(target.tx.clone())
-                                                      },
-                                              None => {
-                                                        println!("map ng ");
-                                                        None
-                                              }
-                                          }
-                                } else {
-                                     None
-                                };
+                           let rtx_ = {
+                                         let  ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
+
+                                         let map = arc_map.lock().unwrap();
+                                         //let map_lock = Arc::clone(&arc_map);
+                                         //let map = map_lock.lock().unwrap();
+                                         let tmp_tx = if map.contains_key(&ipaddr) {
+                                                       match map.get(&ipaddr) {
+                                                           Some(target) => {
+                                                                     println!("map ok ");
+                                                                     //Some(target.tx.clone())
+                                                                     Some(target.tx.clone())
+                                                                   },
+                                                           None => {
+                                                                     println!("map ng ");
+                                                                     None
+                                                           }
+                                                       }
+                                             } else {
+                                                  None
+                                             };
+                                      tmp_tx
+                                     }; // arc_map.locked  drop ....
                            
                            match rtx_ {
 
                                Some(tx) => {
                                              let cmd = super::Command::Cmd {
-                                                 key: "*command".to_string(),
+                                                 key: "*command*".to_string(),
                                              };
-                                             //tx.send(cmd).await.unwrap();
+                                             tx.send(cmd).await.unwrap();
+                                                        println!("tx send ok ");
 
                                           },
                                None => {
