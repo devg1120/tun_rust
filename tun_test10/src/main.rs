@@ -51,6 +51,9 @@ pub enum Command {
         proto: pnet::packet::ip::IpNextHeaderProtocol,
         val: Vec<u8>,
     },
+    Cmd {
+        key: String,
+    },
 }
 
 fn replyer_spawn(
@@ -71,6 +74,9 @@ fn replyer_spawn(
                         _writer.write(&val[..]).await;
                     }
                     .await;
+                }
+                Cmd { key } => {
+                    println!("    Cmd");
                 }
             }
         }
@@ -121,6 +127,9 @@ fn target_spawn(
                             println!("none value");
                         }
                     };
+                }
+                Cmd { key } => {
+                    println!("  Cmd-> {}", key);
                 }
             }
         }
@@ -183,8 +192,9 @@ async fn start(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr, Target>>> ) -> Res
 
         let ipaddr = IpAddr::V4(header.get_destination());
 
-        //let tar_tx_ = if map.contains_key(&ipaddr) {
         let mut map = arc_map.lock().unwrap();
+        //let map2 = Arc::clone(&arc_map);
+        //let map = map2.lock().unwrap();
         let tar_tx_ = if map.contains_key(&ipaddr) {
             match map.get(&ipaddr) {
                 Some(target) => &target.tx,
@@ -218,6 +228,11 @@ async fn start(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr, Target>>> ) -> Res
         };
 
         tar_tx_.send(cmd).await.unwrap();
+
+        //let cmd2 = Command::Cmd {
+        //    key: "foo2".to_string(),
+        //};
+        //tar_tx_.send(cmd2).await.unwrap();
     }
 }
 

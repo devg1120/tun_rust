@@ -18,9 +18,6 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use std::sync::{Arc, Mutex}; 
-//use tokio::sync::Mutex;
-//use std::sync::Arc;
-
 use std::str::FromStr;
 
 
@@ -132,12 +129,11 @@ async fn parser(arc_map: &Arc<std::sync::Mutex<HashMap<IpAddr,super::Target>>>, 
                                  //&target.tx,
 
                           println!("map ok ");
-                          //&target.tx,
-                          //let cmd = super::Command::Cmd {
-                          //    key: "*command".to_string(),
-                          //};
-                          //let txc = target.tx.clone();
-                          //target.tx.send(cmd).await.unwrap();
+                          let cmd = super::Command::Cmd {
+                              key: "*command".to_string(),
+                          };
+                          let txc = target.tx.clone();
+                          target.tx.send(cmd).await.unwrap();
                           //target.tx.send(cmd);
                           
                           //txc.send(cmd).await.unwrap();
@@ -203,44 +199,11 @@ async fn handle_connection(arc_map: Arc<std::sync::Mutex<HashMap<IpAddr,super::T
                     Some(msg) => {
                         let msg = msg?;
                         if msg.is_text() ||msg.is_binary() {
-
+                            parser(&arc_map, &msg).await;
+                           //tokio::spawn( async move {
                            // parser(&arc_map, &msg).await;
-                           ws_sender.send(msg).await?;
-
-                           let  ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
-                           //let map = arc_map.lock().unwrap();
-                           let map_lock = Arc::clone(&arc_map);
-                           let map = map_lock.lock().unwrap();
-                           let rtx_ = if map.contains_key(&ipaddr) {
-                                          match map.get(&ipaddr) {
-                                              Some(target) => {
-                                                        println!("map ok ");
-                                                        Some(target.tx.clone())
-                                                      },
-                                              None => {
-                                                        println!("map ng ");
-                                                        None
-                                              }
-                                          }
-                                } else {
-                                     None
-                                };
-                           
-                           match rtx_ {
-
-                               Some(tx) => {
-                                             let cmd = super::Command::Cmd {
-                                                 key: "*command".to_string(),
-                                             };
-                                             //tx.send(cmd).await.unwrap();
-
-                                          },
-                               None => {
-                                      continue;
-                                     },
-
-                         };
-
+                           // });
+                            ws_sender.send(msg).await?;
                         } else if msg.is_close() {
                             break;
                         }
