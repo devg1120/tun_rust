@@ -95,12 +95,12 @@ async fn main() -> Result<()> {
     println!("ping 10.1.0.2 to test");
     println!("---------------------");
 
-    let (mut reader, mut _writer) = tokio::io::split(tun);
+    let (mut reader, mut writer) = tokio::io::split(tun);
 
     let mut buf = [0u8; 1024];
     loop {
         let n = reader.read(&mut buf).await?;
-        let r = _writer.write(&buf);
+        let r = writer.write(&buf);
         //println!("{:?}",r);
 
         //println!("reading {} bytes: {:?}", n, &buf[..n]);
@@ -125,7 +125,7 @@ async fn main() -> Result<()> {
             header. get_next_level_protocol(),
             //&buf[20..n],
             &buf[hlen..n],
-            &mut _writer,
+            &mut writer,
         );
 
         //if let Some(header) = header {

@@ -624,8 +624,7 @@ dependencies = [
 [[package]]
 name = "tokio-tun"
 version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c1016c0ad018f9a8fdd54c7d6bec7fcc03b670cf89de44629a58913fdcea7fd"
+source = "git+https://github.com/yaa110/tokio-tun.git#898d406e56ad50f6cab537ba18d09d59f2099207"
 dependencies = [
  "futures",
  "libc",
