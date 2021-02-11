@@ -3,3 +3,4 @@ ping 10.1.0.2
 sudo tshark -i tun0
 
 ./target/debug/client ws:/127.0.0.1:8080/
+./target/debug/client2 ws:/127.0.0.1:8080/

@@ -91,9 +91,9 @@ async fn handle_connection(
                                    };
 
                                    let cmd = target.get(0);
-                                   let ipaddr = target.get(1);
+                                   let ipa = target.get(1);
                                    println!("cmd:{:?}", cmd);
-                                   println!("ipaddr:{:?}", ipaddr);
+                                   println!("ipaddr:{:?}", ipa);
 
                                    let (cf_, cmd_) = match cmd {
                                                 Some(cmd2) => {
@@ -111,14 +111,25 @@ async fn handle_connection(
                                        println!("--- cmd error continue");
                                        continue;
                                    };
-/*
-                                   let (if_, ip_) = match ipaddr {
-                                                Some(ip) => {
 
+                                   let d_addr_ = "127.0.0.1".parse::<IpAddr>();
+                                   let d_ipaddr = 
+                                                match d_addr_ {
+                                                   Ok(a) => a,
+                                                   Err(v) => continue,
+                                                            };
 
+                                   let (if_, ipaddr) = match ipa {
+                                                Some(ipa2) => {
+                                                         //let addr_ = "10.1.0.2".parse::<IpAddr>();
+                                                         let addr_ = ipa2.parse::<IpAddr>();
+                                                                      match addr_ {
+                                                                         Ok(a) => (true,a),
+                                                                         Err(v) => (false,d_ipaddr),
+                                                                                  }
+                                                              },
 
-                                                        },
-                                                 None => (false, ""),
+                                                 None => (false, d_ipaddr),
                                         };
                                    
                                                                       
@@ -126,19 +137,19 @@ async fn handle_connection(
                                        println!("--- ipaddr error continue");
                                        continue;
                                    };
-*/
+
                                    ws_sender.send(msg).await?;
                                    ws_sender.send(Message::text("Ok".to_string())).await?;
 
                                    let rtx_ = {
                                                  //let  ipaddr = IpAddr::V4(Ipv4Addr::new(10, 1, 0, 2));
                                                  //let  ipaddr = IpAddr::from_str("10.1.0.2");
-                                                 let addr_ = "10.1.0.2".parse::<IpAddr>();
-                                                 let ipaddr = 
-                                                              match addr_ {
-                                                                 Ok(a) => a,
-                                                                 Err(v) => continue,
-                                                            };
+                                                 //let addr_ = "10.1.0.2".parse::<IpAddr>();
+                                                 //let ipaddr = 
+                                                 //             match addr_ {
+                                                 //                Ok(a) => a,
+                                                 //                Err(v) => continue,
+                                                 //           };
                                                  let map = arc_map.lock().unwrap();
                                                  let tmp_tx = if map.contains_key(&ipaddr) {
                                                                match map.get(&ipaddr) {
@@ -162,7 +173,8 @@ async fn handle_connection(
 
                                        Some(tx) => {
                                                      let cmd = super::Command::Cmd {
-                                                         key: "*command*".to_string(),
+                                                         //key: "*command*".to_string(),
+                                                         key: cmd_.to_string(),
                                                      };
                                                      tx.send(cmd).await.unwrap();
                                                                 println!("tx send ok ");

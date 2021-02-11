@@ -42,6 +42,11 @@ pub enum Command {
     },
 }
 
+fn type_of<T>(_: T) -> String {
+    let a = std::any::type_name::<T>();
+    return a.to_string();
+} 
+
 fn replyer_spawn(
     mut _writer: tokio::io::WriteHalf<Tun>,
     mut rx1: mpsc::Receiver<Command>,
@@ -75,6 +80,8 @@ fn target_spawn(
     mut rx1: mpsc::Receiver<Command>,
 ) -> tokio::task::JoinHandle<()> {
     let mut cnt = 0;
+    let mut reply = true;
+    let _ipaddr = ipaddr;
 
     tokio::spawn(async move {
         while let Some(cmd) = rx1.recv().await {
@@ -104,10 +111,12 @@ fn target_spawn(
                                 proto: proto,
                                 val: v,
                             };
-                            async {
-                                tx1.send(cmd2).await;
-                            }
-                            .await;
+                            if (reply) {
+                              async {
+                                  tx1.send(cmd2).await;
+                              }
+                              .await;
+                            };
                         }
                         None => {
                             println!("none value");
@@ -115,7 +124,15 @@ fn target_spawn(
                     };
                 }
                 Cmd { key } => {
-                    println!("  Cmd-> {}", key);
+                    println!("  Cmd-> {} {}", &key, _ipaddr.to_string());
+                    println!("type key:  {} ", type_of(&key));
+
+                    match key.as_str() {
+                            "start" => {reply = true;},
+                            "stop"  => {reply = false;},
+                             _ => println!("blahh blahhh"),
+
+                    };
                 }
             }
         }
